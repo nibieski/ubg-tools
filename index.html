@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>UBG Alphabet</title>
+
+<style>
+	* {
+		box-sizing: border-box;
+	}
+
+	body {
+		margin: 0;
+		min-height: 100vh;
+		background: #000;
+		color: #fff;
+		font-family: Arial, Helvetica, sans-serif;
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		padding: 24px;
+	}
+
+	.container {
+		width: 100%;
+		max-width: 760px;
+	}
+
+	.alphabet {
+		width: 100%;
+		padding: 18px;
+		background: #111;
+		border: 1px solid #252525;
+		border-radius: 12px;
+		font-size: 18px;
+		line-height: 1.8;
+		word-break: break-all;
+		margin-bottom: 14px;
+	}
+
+	textarea,
+	.output {
+		width: 100%;
+		border: 1px solid #252525;
+		border-radius: 12px;
+		background: #111;
+		color: #fff;
+		font: inherit;
+		outline: none;
+	}
+
+	textarea {
+		min-height: 150px;
+		resize: vertical;
+		padding: 18px;
+		font-size: 18px;
+		transition: border-color 0.2s ease, box-shadow 0.2s ease;
+	}
+
+	textarea:focus {
+		border-color: #555;
+		box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.04);
+	}
+
+	.output {
+		margin-top: 14px;
+		min-height: 110px;
+		padding: 18px;
+		font-size: 15px;
+		line-height: 1.6;
+		word-break: break-all;
+		transition: border-color 0.2s ease;
+	}
+
+	.copy {
+		width: 100%;
+		margin-top: 10px;
+		padding: 13px;
+		border: 0;
+		border-radius: 10px;
+		background: #fff;
+		color: #000;
+		font-weight: 700;
+		font-size: 15px;
+		cursor: pointer;
+		transition:
+			background 0.2s ease,
+			transform 0.15s ease,
+			box-shadow 0.2s ease;
+	}
+
+	.copy:hover {
+		background: #ddd;
+		box-shadow: 0 4px 14px rgba(255, 255, 255, 0.08);
+	}
+
+	.copy:active {
+		transform: scale(0.98);
+		box-shadow: 0 1px 6px rgba(255, 255, 255, 0.04);
+	}
+</style>
+</head>
+
+<body>
+
+<div class="container">
+
+	<div class="alphabet" id="currentAlphabet"></div>
+
+	<textarea
+		id="customAlphabet"
+		placeholder="Enter your custom alphabet..."
+		spellcheck="false"
+	></textarea>
+
+	<div class="output" id="output"></div>
+
+	<button class="copy" id="copy">Copy</button>
+
+</div>
+
+<script>
+const legacy = [
+	"Ω", "Ψ", "Χ", "Φ", "Υ", "Τ", "Σ", "Ρ", "Π", "Ο", "Ξ", "Ν",
+	"Μ", "Λ", "Κ", "Ι", "Θ", "Η", "Ζ", "Ε", "Δ", "Γ", "Β", "Α"
+];
+
+const password = "play untitled battery game today";
+
+const currentAlphabet = document.getElementById("currentAlphabet");
+const customAlphabet = document.getElementById("customAlphabet");
+const output = document.getElementById("output");
+const copy = document.getElementById("copy");
+
+currentAlphabet.textContent = legacy.join(" ");
+
+function xor(data) {
+	const result = new Uint8Array(data.length);
+
+	for (let i = 0; i < data.length; i++) {
+		const passwordByte = password.charCodeAt(i % password.length);
+		result[i] = data[i] ^ passwordByte;
+	}
+
+	return result;
+}
+
+function toBase64(bytes) {
+	let binary = "";
+
+	for (const byte of bytes) {
+		binary += String.fromCharCode(byte);
+	}
+
+	return btoa(binary);
+}
+
+function encodeAlphabet(alphabet) {
+	const json = JSON.stringify(alphabet);
+	const encoded = new TextEncoder().encode(json);
+	const encrypted = xor(encoded);
+
+	return "UBG-" + toBase64(encrypted);
+}
+
+function generate() {
+	const chars = Array.from(customAlphabet.value);
+
+	if (chars.length === 0) {
+		output.textContent = "";
+		return;
+	}
+
+	const alphabet = legacy.map((_, index) => chars[index] ?? legacy[index]);
+	output.textContent = encodeAlphabet(alphabet);
+}
+
+customAlphabet.addEventListener("input", generate);
+
+copy.addEventListener("click", async () => {
+	if (!output.textContent) {
+		return;
+	}
+
+	try {
+		await navigator.clipboard.writeText(output.textContent);
+
+		copy.textContent = "Copied!";
+
+		setTimeout(() => {
+			copy.textContent = "Copy";
+		}, 1200);
+	} catch {
+		copy.textContent = "Failed";
+
+		setTimeout(() => {
+			copy.textContent = "Copy";
+		}, 1200);
+	}
+});
+</script>
+
+</body>
+</html>
