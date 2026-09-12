@@ -27,6 +27,12 @@
 		max-width: 760px;
 	}
 
+	.label {
+		font-size: 13px;
+		color: #888;
+		margin-bottom: 8px;
+	}
+
 	.alphabet {
 		width: 100%;
 		padding: 18px;
@@ -35,8 +41,8 @@
 		border-radius: 12px;
 		font-size: 18px;
 		line-height: 1.8;
-		word-break: break-all;
-		margin-bottom: 14px;
+		word-break: break-word;
+		margin-bottom: 18px;
 	}
 
 	textarea,
@@ -106,13 +112,19 @@
 
 <div class="container">
 
+	<div class="label">Normal alphabet</div>
+
 	<div class="alphabet" id="currentAlphabet"></div>
+
+	<div class="label">Custom alphabet</div>
 
 	<textarea
 		id="customAlphabet"
-		placeholder="Enter your custom alphabet..."
+		placeholder="Ω (2) (3) (4) (5) ..."
 		spellcheck="false"
 	></textarea>
+
+	<div class="label" style="margin-top: 18px;">Generated code</div>
 
 	<div class="output" id="output"></div>
 
@@ -133,7 +145,7 @@ const customAlphabet = document.getElementById("customAlphabet");
 const output = document.getElementById("output");
 const copy = document.getElementById("copy");
 
-currentAlphabet.textContent = legacy.join(" ");
+currentAlphabet.textContent = legacy.join("   ");
 
 function xor(data) {
 	const result = new Uint8Array(data.length);
@@ -165,14 +177,17 @@ function encodeAlphabet(alphabet) {
 }
 
 function generate() {
-	const chars = Array.from(customAlphabet.value);
+	const chars = customAlphabet.value.trim().split(/\s+/);
 
-	if (chars.length === 0) {
+	if (customAlphabet.value.trim() === "") {
 		output.textContent = "";
 		return;
 	}
 
-	const alphabet = legacy.map((_, index) => chars[index] ?? legacy[index]);
+	const alphabet = legacy.map((oldChar, index) => {
+		return chars[index] ?? oldChar;
+	});
+
 	output.textContent = encodeAlphabet(alphabet);
 }
 
