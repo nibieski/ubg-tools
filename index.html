@@ -40,13 +40,55 @@
 		border: 1px solid #252525;
 		border-radius: 12px;
 		font-size: 18px;
-		line-height: 1.8;
+		line-height: 1.5;
 		word-break: break-word;
 		margin-bottom: 18px;
 	}
 
 	.input-wrapper {
 		position: relative;
+	}
+
+	.input-layer {
+		position: relative;
+		width: 100%;
+		min-height: 150px;
+	}
+
+	.ghost {
+		position: absolute;
+		inset: 0;
+		padding: 18px;
+		border: 1px solid transparent;
+		border-radius: 12px;
+		font: inherit;
+		font-size: 18px;
+		line-height: 1.5;
+		white-space: pre-wrap;
+		overflow: hidden;
+		pointer-events: none;
+		word-wrap: break-word;
+		color: #fff;
+	}
+
+	.ghost-text {
+		white-space: pre-wrap;
+	}
+
+	.prediction-1 {
+		color: rgba(255, 255, 255, 0.24);
+	}
+
+	.prediction-2 {
+		color: rgba(255, 255, 255, 0.14);
+	}
+
+	.prediction-3 {
+		color: rgba(255, 255, 255, 0.08);
+	}
+
+	.prediction-4 {
+		color: rgba(255, 255, 255, 0.045);
 	}
 
 	textarea {
@@ -59,13 +101,19 @@
 		border: 1px solid #252525;
 		border-radius: 12px;
 		background: transparent;
-		color: #fff;
+		color: transparent;
+		caret-color: #fff;
 		font: inherit;
 		font-size: 18px;
 		line-height: 1.5;
 		outline: none;
-		caret-color: #fff;
+		white-space: pre-wrap;
 		transition: border-color 0.2s ease, box-shadow 0.2s ease;
+	}
+
+	textarea::selection {
+		background: rgba(255, 255, 255, 0.2);
+		color: transparent;
 	}
 
 	textarea:focus {
@@ -75,39 +123,7 @@
 
 	textarea::placeholder {
 		color: #555;
-	}
-
-	.ghost {
-		position: absolute;
-		z-index: 1;
-		top: 18px;
-		left: 18px;
-		right: 18px;
-		bottom: 18px;
-		color: #fff;
-		font: inherit;
-		font-size: 18px;
-		line-height: 1.5;
-		white-space: pre-wrap;
-		word-wrap: break-word;
-		overflow: hidden;
-		pointer-events: none;
-	}
-
-	.ghost-text {
-		color: rgba(255, 255, 255, 0.22);
-	}
-
-	.ghost-text:nth-of-type(2) {
-		color: rgba(255, 255, 255, 0.14);
-	}
-
-	.ghost-text:nth-of-type(3) {
-		color: rgba(255, 255, 255, 0.08);
-	}
-
-	.ghost-text:nth-of-type(4) {
-		color: rgba(255, 255, 255, 0.04);
+		opacity: 1;
 	}
 
 	.output {
@@ -122,6 +138,7 @@
 		font-size: 15px;
 		line-height: 1.6;
 		word-break: break-all;
+		white-space: pre-wrap;
 	}
 
 	.copy {
@@ -164,13 +181,15 @@
 	<div class="label">Custom alphabet</div>
 
 	<div class="input-wrapper">
-		<div class="ghost" id="ghost"></div>
+		<div class="input-layer">
+			<div class="ghost" id="ghost"></div>
 
-		<textarea
-			id="customAlphabet"
-			placeholder="Ω (2) (3) (4) (5) ..."
-			spellcheck="false"
-		></textarea>
+			<textarea
+				id="customAlphabet"
+				placeholder="Ω (2) (3) (4) (5) ..."
+				spellcheck="false"
+			></textarea>
+		</div>
 	</div>
 
 	<div class="label" style="margin-top: 18px;">Generated code</div>
@@ -201,8 +220,7 @@ function xor(data) {
 	const result = new Uint8Array(data.length);
 
 	for (let i = 0; i < data.length; i++) {
-		const passwordByte = password.charCodeAt(i % password.length);
-		result[i] = data[i] ^ passwordByte;
+		result[i] = data[i] ^ password.charCodeAt(i % password.length);
 	}
 
 	return result;
@@ -218,6 +236,17 @@ function toBase64(bytes) {
 	return btoa(binary);
 }
 
+function fromBase64(value) {
+	const binary = atob(value);
+	const bytes = new Uint8Array(binary.length);
+
+	for (let i = 0; i < binary.length; i++) {
+		bytes[i] = binary.charCodeAt(i);
+	}
+
+	return bytes;
+}
+
 function encodeAlphabet(alphabet) {
 	const json = JSON.stringify(alphabet);
 	const encoded = new TextEncoder().encode(json);
@@ -226,46 +255,100 @@ function encodeAlphabet(alphabet) {
 	return "UBG-" + toBase64(encrypted);
 }
 
+function decodeAlphabet(code) {
+	if (!code.startsWith("UBG-")) {
+		return null;
+	}
+
+	const base64 = code.slice(4);
+	const encrypted = fromBase64(base64);
+	const decrypted = xor(encrypted);
+	const json = new TextDecoder().decode(decrypted);
+
+	const alphabet = JSON.parse(json);
+
+	if (!Array.isArray(alphabet)) {
+		return null;
+	}
+
+	return alphabet;
+}
+
+function getCustomEntries() {
+	return customAlphabet.value
+		.trim()
+		.split(/\s+/)
+		.filter(Boolean);
+}
+
 function updateGhost() {
-	const chars = customAlphabet.value.trim().split(/\s+/).filter(Boolean);
-	const nextIndex = chars.length;
+	const value = customAlphabet.value;
+	const entries = value.trim().split(/\s+/).filter(Boolean);
+	const nextIndex = entries.length;
 
 	ghost.innerHTML = "";
+
+	if (value === "") {
+		return;
+	}
+
+	const typed = document.createElement("span");
+	typed.className = "ghost-text";
+	typed.textContent = value;
+	ghost.appendChild(typed);
 
 	if (nextIndex >= legacy.length) {
 		return;
 	}
 
-	const text = document.createTextNode(customAlphabet.value);
-
-	ghost.appendChild(text);
-
-	const predictions = document.createDocumentFragment();
-
-	for (let i = nextIndex; i < Math.min(nextIndex + 4, legacy.length); i++) {
-		const span = document.createElement("span");
-		span.className = "ghost-text";
-		span.textContent =
-			(i === nextIndex ? " " : " ") + legacy[i];
-
-		predictions.appendChild(span);
+	if (!/\s$/.test(value)) {
+		const spacer = document.createTextNode(" ");
+		ghost.appendChild(spacer);
 	}
 
-	ghost.appendChild(predictions);
+	for (let i = nextIndex; i < Math.min(nextIndex + 4, legacy.length); i++) {
+		const prediction = document.createElement("span");
+		prediction.className = `prediction-${i - nextIndex + 1}`;
+		prediction.textContent = legacy[i];
+
+		if (i < Math.min(nextIndex + 3, legacy.length - 1)) {
+			prediction.textContent += " ";
+		}
+
+		ghost.appendChild(prediction);
+	}
 }
 
 function generate() {
-	const chars = customAlphabet.value.trim().split(/\s+/).filter(Boolean);
+	const value = customAlphabet.value.trim();
 
 	updateGhost();
 
-	if (chars.length === 0) {
+	if (!value) {
 		output.textContent = "";
 		return;
 	}
 
+	if (value.startsWith("UBG-")) {
+		try {
+			const decoded = decodeAlphabet(value);
+
+			if (!decoded) {
+				throw new Error();
+			}
+
+			output.textContent = decoded.join("   ");
+			return;
+		} catch {
+			output.textContent = "Invalid code";
+			return;
+		}
+	}
+
+	const entries = getCustomEntries();
+
 	const alphabet = legacy.map((oldChar, index) => {
-		return chars[index] ?? oldChar;
+		return entries[index] ?? oldChar;
 	});
 
 	output.textContent = encodeAlphabet(alphabet);
@@ -274,7 +357,7 @@ function generate() {
 customAlphabet.addEventListener("input", generate);
 
 copy.addEventListener("click", async () => {
-	if (!output.textContent) {
+	if (!output.textContent || output.textContent === "Invalid code") {
 		return;
 	}
 
