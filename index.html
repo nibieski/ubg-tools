@@ -50,17 +50,21 @@
 	}
 
 	textarea {
+		position: relative;
+		z-index: 2;
 		width: 100%;
 		min-height: 150px;
 		resize: vertical;
-		padding: 18px 18px 52px;
+		padding: 18px;
 		border: 1px solid #252525;
 		border-radius: 12px;
-		background: #111;
+		background: transparent;
 		color: #fff;
 		font: inherit;
 		font-size: 18px;
+		line-height: 1.5;
 		outline: none;
+		caret-color: #fff;
 		transition: border-color 0.2s ease, box-shadow 0.2s ease;
 	}
 
@@ -69,39 +73,41 @@
 		box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.04);
 	}
 
-	.preview {
+	textarea::placeholder {
+		color: #555;
+	}
+
+	.ghost {
 		position: absolute;
+		z-index: 1;
+		top: 18px;
 		left: 18px;
 		right: 18px;
-		bottom: 14px;
-		display: flex;
-		align-items: center;
-		gap: 12px;
-		pointer-events: none;
-		user-select: none;
-		white-space: nowrap;
+		bottom: 18px;
+		color: #fff;
+		font: inherit;
+		font-size: 18px;
+		line-height: 1.5;
+		white-space: pre-wrap;
+		word-wrap: break-word;
 		overflow: hidden;
+		pointer-events: none;
 	}
 
-	.preview-symbol {
-		font-size: 17px;
-		transition: opacity 0.2s ease;
+	.ghost-text {
+		color: rgba(255, 255, 255, 0.22);
 	}
 
-	.preview-symbol:nth-child(1) {
-		opacity: 0.28;
+	.ghost-text:nth-of-type(2) {
+		color: rgba(255, 255, 255, 0.14);
 	}
 
-	.preview-symbol:nth-child(2) {
-		opacity: 0.17;
+	.ghost-text:nth-of-type(3) {
+		color: rgba(255, 255, 255, 0.08);
 	}
 
-	.preview-symbol:nth-child(3) {
-		opacity: 0.09;
-	}
-
-	.preview-symbol:nth-child(4) {
-		opacity: 0.045;
+	.ghost-text:nth-of-type(4) {
+		color: rgba(255, 255, 255, 0.04);
 	}
 
 	.output {
@@ -116,7 +122,6 @@
 		font-size: 15px;
 		line-height: 1.6;
 		word-break: break-all;
-		transition: border-color 0.2s ease;
 	}
 
 	.copy {
@@ -159,13 +164,13 @@
 	<div class="label">Custom alphabet</div>
 
 	<div class="input-wrapper">
+		<div class="ghost" id="ghost"></div>
+
 		<textarea
 			id="customAlphabet"
 			placeholder="Ω (2) (3) (4) (5) ..."
 			spellcheck="false"
 		></textarea>
-
-		<div class="preview" id="preview"></div>
 	</div>
 
 	<div class="label" style="margin-top: 18px;">Generated code</div>
@@ -186,7 +191,7 @@ const password = "play untitled battery game today";
 
 const currentAlphabet = document.getElementById("currentAlphabet");
 const customAlphabet = document.getElementById("customAlphabet");
-const preview = document.getElementById("preview");
+const ghost = document.getElementById("ghost");
 const output = document.getElementById("output");
 const copy = document.getElementById("copy");
 
@@ -221,25 +226,38 @@ function encodeAlphabet(alphabet) {
 	return "UBG-" + toBase64(encrypted);
 }
 
-function updatePreview() {
+function updateGhost() {
 	const chars = customAlphabet.value.trim().split(/\s+/).filter(Boolean);
-
-	preview.innerHTML = "";
-
 	const nextIndex = chars.length;
 
-	for (let i = nextIndex; i < legacy.length && i < nextIndex + 4; i++) {
-		const symbol = document.createElement("span");
-		symbol.className = "preview-symbol";
-		symbol.textContent = legacy[i];
-		preview.appendChild(symbol);
+	ghost.innerHTML = "";
+
+	if (nextIndex >= legacy.length) {
+		return;
 	}
+
+	const text = document.createTextNode(customAlphabet.value);
+
+	ghost.appendChild(text);
+
+	const predictions = document.createDocumentFragment();
+
+	for (let i = nextIndex; i < Math.min(nextIndex + 4, legacy.length); i++) {
+		const span = document.createElement("span");
+		span.className = "ghost-text";
+		span.textContent =
+			(i === nextIndex ? " " : " ") + legacy[i];
+
+		predictions.appendChild(span);
+	}
+
+	ghost.appendChild(predictions);
 }
 
 function generate() {
 	const chars = customAlphabet.value.trim().split(/\s+/).filter(Boolean);
 
-	updatePreview();
+	updateGhost();
 
 	if (chars.length === 0) {
 		output.textContent = "";
@@ -277,7 +295,7 @@ copy.addEventListener("click", async () => {
 	}
 });
 
-updatePreview();
+updateGhost();
 </script>
 
 </body>
